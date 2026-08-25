@@ -62,7 +62,7 @@ RUN composer install \
 # Frontend
 # ----------------------------
 RUN if [ -f package.json ]; then \
-        npm install && npm run build; \
+        npm install && npm run production; \
     fi
 
 # ----------------------------
