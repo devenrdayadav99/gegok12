@@ -1,8 +1,10 @@
-
 FROM php:8.4-fpm
 
-# Install system dependencies
+# ----------------------------
+# System dependencies
+# ----------------------------
 RUN apt-get update && apt-get install -y \
+    nginx \
     git \
     unzip \
     curl \
@@ -28,48 +30,67 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js 20
+# ----------------------------
+# Node.js 20
+# ----------------------------
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && node -v \
     && npm -v
 
-# Install Composer
+# ----------------------------
+# Composer
+# ----------------------------
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Application directory
+# ----------------------------
+# Laravel directory
+# ----------------------------
 WORKDIR /var/www
 
-# Copy Laravel application
 COPY . .
 
-# Git permission fix
-RUN git config --system --add safe.directory /var/www
-
-# Install PHP dependencies
+# ----------------------------
+# Composer dependencies
+# ----------------------------
 RUN composer install \
     --no-dev \
     --optimize-autoloader \
     --no-interaction
 
-# Install/build frontend if package.json exists
+# ----------------------------
+# Frontend
+# ----------------------------
 RUN if [ -f package.json ]; then \
         npm install && npm run build; \
     fi
 
-# Laravel storage/cache permissions
+# ----------------------------
+# Laravel directories & permissions
+# ----------------------------
 RUN mkdir -p \
-    storage/framework/cache \
-    storage/framework/sessions \
-    storage/framework/views \
-    storage/logs \
-    bootstrap/cache \
+        storage/framework/cache \
+        storage/framework/sessions \
+        storage/framework/views \
+        storage/logs \
+        bootstrap/cache \
     && chown -R www-data:www-data /var/www \
     && chmod -R 775 storage bootstrap/cache
 
-# Railway provides PORT automatically
+# ----------------------------
+# Nginx configuration
+# ----------------------------
+RUN rm -f /etc/nginx/sites-enabled/default \
+          /etc/nginx/sites-available/default
+
+COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
+
+# ----------------------------
+# Start script
+# ----------------------------
+COPY docker/start.sh /start.sh
+RUN chmod +x /start.sh
+
 EXPOSE 8080
 
-# Start Laravel
-CMD ["sh", "-c", "php artisan optimize:clear && php artisan serve --host=0.0.0.0 --port=${PORT}"]
-
+CMD ["/start.sh"]
