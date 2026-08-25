@@ -1,4 +1,4 @@
-Bilkul. Pura purana Dockerfile delete karke ye exact wala paste karo.
+
 FROM php:8.4-fpm
 
 # Install system dependencies
